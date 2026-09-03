@@ -1,0 +1,4 @@
+entity_id,entity_type,entity_name,country,parent_entity_id
+CLIENT-X,CLIENT,ABC Limited,GB,UBO-72
+CLIENT-Y,CLIENT,XYZ Holdings,GB,UBO-72
+UBO-72,BENEFICIAL_OWNER,Example Owner,GB,
