@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:surveillance;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password: ""
+surveillance:
+  daily-batch:
+    root-directory: ${java.io.tmpdir}/surveillance-daily-test
+    allowed-regions: AMER,EMEA,APAC,GLOBAL
+aegis:
+  api-key: ""
+  actor-id: test-investigator
+  actor-role: SUPERVISOR
+  cors-origins: http://localhost:3000
+  ml-base-url: http://localhost:8000
+  file-input:
+    bootstrap-samples: false

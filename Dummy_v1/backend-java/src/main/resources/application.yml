@@ -1,0 +1,81 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: trade-surveillance-navigator-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/surveillance}
+    username: ${DATABASE_USER:surveillance}
+    password: ${DATABASE_PASSWORD:surveillance}
+  flyway:
+    enabled: true
+  config:
+    import: optional:file:${AEGIS_FILE_CATALOG:./config/input-files.yml}
+  servlet:
+    multipart:
+      max-file-size: 20GB
+      max-request-size: ${SURVEILLANCE_MAX_REQUEST_SIZE:100GB}
+      file-size-threshold: 1MB
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 15000
+        request.timeout.ms: 5000
+    consumer:
+      group-id: ${AEGIS_KAFKA_CONSUMER_GROUP:trade-surveillance-navigator-v1}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+surveillance:
+  daily-batch:
+    root-directory: ${SURVEILLANCE_DAILY_ROOT:./data/daily-input}
+    allowed-regions: ${SURVEILLANCE_ALLOWED_REGIONS:AMER,EMEA,APAC,GLOBAL}
+    max-alert-bytes: ${SURVEILLANCE_MAX_ALERT_BYTES:536870912}
+    max-parquet-bytes: ${SURVEILLANCE_MAX_PARQUET_BYTES:21474836480}
+aegis:
+  ml-base-url: ${ML_BASE_URL:http://localhost:8000}
+  api-key: ${AEGIS_API_KEY:hackathon-local-change-me}
+  actor-id: ${AEGIS_ACTOR_ID:demo-investigator}
+  actor-role: ${AEGIS_ACTOR_ROLE:SUPERVISOR}
+  cors-origins: ${AEGIS_CORS_ORIGINS:http://localhost:3000,http://localhost:3001}
+  kafka:
+    enabled: ${AEGIS_KAFKA_ENABLED:false}
+    accepted-topic: ${AEGIS_KAFKA_ACCEPTED_TOPIC:surveillance.file.accepted.v1}
+    completed-topic: ${AEGIS_KAFKA_COMPLETED_TOPIC:surveillance.ml.scan.triggered.v1}
+  file-input:
+    root-directory: ${AEGIS_INPUT_ROOT:./data/input}
+    sample-directory: ${AEGIS_SAMPLE_INPUT_ROOT:./sample-data}
+    bootstrap-samples: ${AEGIS_BOOTSTRAP_SAMPLES:false}
+    max-file-size-bytes: ${AEGIS_INPUT_MAX_BYTES:2147483648}
+    create-directories: true
+    datasets:
+      trades:
+        required: true
+        filename-pattern: "trades*.csv"
+        bootstrap-filename: "trades-5000.csv"
+        required-columns: [trade_id, order_id, event_time, instrument, side, quantity, price, account_id, client_id, venue]
+      orders:
+        required: true
+        filename-pattern: "orders*.csv"
+        required-columns: [order_id, event_time, instrument, side, quantity, price, account_id, client_id, venue, status]
+      accounts:
+        required: true
+        filename-pattern: "accounts*.csv"
+        required-columns: [account_id, client_id, account_type, country, status]
+      entities:
+        required: true
+        filename-pattern: "entities*.csv"
+        required-columns: [entity_id, entity_type, entity_name, country, parent_entity_id]
+      market-data:
+        required: false
+        filename-pattern: "market-data*.csv"
+        required-columns: [event_time, instrument, venue, bid, ask, last_price, volume]

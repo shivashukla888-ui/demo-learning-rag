@@ -1,0 +1,1 @@
+{"batchId": "SURV-20260905-APAC", "businessDate": "2026-09-05", "region": "APAC", "alertId": "ALT-FI-0001", "ruleId": "FI-WASH-001", "ruleVersion": "4.7", "typology": "WASH_TRADING", "assetClass": "FIXED_INCOME", "ruleScore": 82, "triggeringTradeIds": ["T-000000", "T-000001"], "accountTokens": ["ACC-TOKEN-001", "ACC-TOKEN-002"], "instrumentIds": ["BOND-721"]}

@@ -1,0 +1,31 @@
+# Operator-editable catalog for file-based ingestion.
+# Changes override the safe defaults bundled in application.yml.
+aegis:
+  file-input:
+    root-directory: ${AEGIS_INPUT_ROOT:./data/input}
+    sample-directory: ${AEGIS_SAMPLE_INPUT_ROOT:./sample-data}
+    bootstrap-samples: ${AEGIS_BOOTSTRAP_SAMPLES:false}
+    max-file-size-bytes: ${AEGIS_INPUT_MAX_BYTES:2147483648}
+    create-directories: true
+    datasets:
+      trades:
+        required: true
+        filename-pattern: "trades*.csv"
+        bootstrap-filename: "trades-5000.csv"
+        required-columns: [trade_id, order_id, event_time, instrument, side, quantity, price, account_id, client_id, venue]
+      orders:
+        required: true
+        filename-pattern: "orders*.csv"
+        required-columns: [order_id, event_time, instrument, side, quantity, price, account_id, client_id, venue, status]
+      accounts:
+        required: true
+        filename-pattern: "accounts*.csv"
+        required-columns: [account_id, client_id, account_type, country, status]
+      entities:
+        required: true
+        filename-pattern: "entities*.csv"
+        required-columns: [entity_id, entity_type, entity_name, country, parent_entity_id]
+      market-data:
+        required: false
+        filename-pattern: "market-data*.csv"
+        required-columns: [event_time, instrument, venue, bid, ask, last_price, volume]

@@ -1,0 +1,42 @@
+# Operating system and editor files
+.DS_Store
+~$*
+
+# Local dependency/build caches
+.pnpm-store/
+**/node_modules/
+**/.next/
+**/.vinext/
+**/dist/
+**/.wrangler/
+**/target/
+**/.pytest_cache/
+**/__pycache__/
+*.pyc
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local deployment bindings
+dashboard/.openai/
+
+# Runtime inputs, trained artifacts, and generated ML output
+sample-data/**
+!sample-data/daily/
+!sample-data/daily/**
+runtime-data/**
+!runtime-data/input/
+!runtime-data/input/.gitkeep
+!runtime-data/models/
+!runtime-data/models/.gitkeep
+!runtime-data/ml-output/
+!runtime-data/ml-output/.gitkeep
+*.joblib
+
+# Generated logs and temporary files
+*.log
+*.tmp

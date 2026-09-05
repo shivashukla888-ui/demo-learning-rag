@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "daily-paired-batch-v1",
+  "batchId": "SURV-20260905-EMEA",
+  "businessDate": "2026-09-05",
+  "region": "EMEA",
+  "status": "READY",
+  "alerts": {
+    "filename": "alerts.jsonl",
+    "bytes": 362,
+    "sha256": "92431c911aeeee5c5817881d4dc8207ebc311088e776179e2d00eb05a0a8ebc9"
+  },
+  "trades": [
+    {
+      "filename": "trades-part-00001.parquet",
+      "bytes": 26439,
+      "sha256": "4e841a7288f8a6a15dfa3f5f4c36e96498cc966d244f7088da1c94f70dbe7f3b"
+    },
+    {
+      "filename": "trades-part-00002.parquet",
+      "bytes": 26483,
+      "sha256": "d65995e8067de5fb3f7c07d28d6265912bea96a22ebb99ec0dc2b7089cb72df6"
+    }
+  ],
+  "privacy": {
+    "identifiers": "TOKENISED",
+    "llmRawDataAllowed": false
+  }
+}

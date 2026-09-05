@@ -1,0 +1,314 @@
+openapi: 3.1.0
+info: {title: Trade Surveillance Navigator API, version: 1.0.0}
+paths:
+  /v1/ingestion/daily-batches/configuration:
+    get:
+      summary: Retrieve the regional daily paired-batch contract
+      responses: {'200': {description: Regions, limits and required files}}
+  /v1/ingestion/daily-batches/{region}/{businessDate}/{batchId}/alerts:
+    post:
+      summary: Validate and store one existing Java alert JSON or JSONL contract
+      parameters:
+        - {in: path, name: region, required: true, schema: {type: string, enum: [AMER, EMEA, APAC, GLOBAL]}}
+        - {in: path, name: businessDate, required: true, schema: {type: string, format: date}}
+        - {in: path, name: batchId, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content: {multipart/form-data: {schema: {type: object, required: [file], properties: {file: {type: string, format: binary}}}}}
+      responses: {'202': {description: Alert contract accepted; readiness returned}, '409': {description: Batch already finalised}}
+  /v1/ingestion/daily-batches/{region}/{businessDate}/{batchId}/trades:
+    post:
+      summary: Validate and atomically register one or more Parquet part files
+      parameters:
+        - {in: path, name: region, required: true, schema: {type: string, enum: [AMER, EMEA, APAC, GLOBAL]}}
+        - {in: path, name: businessDate, required: true, schema: {type: string, format: date}}
+        - {in: path, name: batchId, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files]
+              properties: {files: {type: array, minItems: 1, items: {type: string, format: binary}}}
+      responses: {'202': {description: All Parquet parts accepted and readiness returned}, '409': {description: Batch already finalised}}
+  /v1/ingestion/daily-batches/{region}/{businessDate}/{batchId}/readiness:
+    get:
+      summary: Check alert availability, Parquet part count and immutable ready status
+      parameters:
+        - {in: path, name: region, required: true, schema: {type: string}}
+        - {in: path, name: businessDate, required: true, schema: {type: string, format: date}}
+        - {in: path, name: batchId, required: true, schema: {type: string}}
+      responses: {'200': {description: Daily batch readiness}}
+  /v1/daily-batches:
+    get:
+      summary: List processing and reconciliation results for regional daily batches
+      responses: {'200': {description: Completed and active daily ML jobs}}
+  /v1/daily-batches/cases:
+    get:
+      summary: Retrieve bounded case clusters produced from completed daily enrichments
+      parameters: [{in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 1000, default: 250}}]
+      responses: {'200': {description: Region-aware case clusters for Java/PostgreSQL synchronisation}}
+  /v1/daily-batches/scan:
+    post:
+      summary: Trigger immediate discovery of ready daily manifests
+      responses: {'200': {description: Newly discovered jobs and current status}}
+  /v1/model-feedback:
+    post:
+      summary: Record an investigator outcome as a governed retraining candidate without online learning
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ModelFeedback'}}}
+      responses: {'202': {description: Feedback recorded; human approval remains required for retraining}}
+  /v1/ingestion/files/configuration:
+    get:
+      summary: Retrieve the configured file catalog, directories and schemas
+      responses: {'200': {description: Active backend file-input configuration}}
+  /v1/ingestion/files/readiness:
+    get:
+      summary: Check whether all required accepted datasets are available
+      responses: {'200': {description: Dataset readiness status}}
+  /v1/ingestion/files/{dataset}:
+    post:
+      summary: Upload, validate and route a configured CSV dataset
+      parameters: [{in: path, name: dataset, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties: {file: {type: string, format: binary}}
+      responses:
+        '202': {description: File accepted or quarantined with validation reasons}
+  /v1/ingestion/files/scan:
+    post:
+      summary: Validate files placed directly in configured inbound folders
+      responses: {'200': {description: Results for all pending files}}
+  /v1/ingestion/schema:
+    get:
+      summary: Retrieve the canonical trade-event input contract
+      responses:
+        '200': {description: Supported schema and validation rules}
+  /v1/ingestion/trades:
+    post:
+      summary: Validate and accept a batch of trade events idempotently
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/IngestionBatchRequest'}}}
+      responses:
+        '200': {description: Batch control result, content: {application/json: {schema: {$ref: '#/components/schemas/IngestionResult'}}}}
+  /v1/ingestion/batches/{batchId}:
+    get:
+      summary: Retrieve an ingestion batch result
+      parameters: [{in: path, name: batchId, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Batch control result, content: {application/json: {schema: {$ref: '#/components/schemas/IngestionResult'}}}}
+        '404': {description: Batch not found}
+  /v1/alerts/score:
+    post:
+      summary: Score and explain an existing rule alert
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ScoreRequest'}}}
+      responses:
+        '200': {description: Explainable assessment, content: {application/json: {schema: {$ref: '#/components/schemas/Assessment'}}}}
+  /v1/investigation-copilot:
+    post:
+      summary: Generate a guarded, evidence-grounded investigation aid for an eligible case
+      description: >-
+        Executes at most one structured LLM call after local eligibility, sensitive-data,
+        prompt-injection and token-budget checks. Raw Parquet is never accepted. The response
+        is advisory and always requires a human decision.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/InvestigationCopilotRequest'}}}
+      responses:
+        '200': {description: Generated, cached or zero-token gated result, content: {application/json: {schema: {$ref: '#/components/schemas/InvestigationCopilotResponse'}}}}
+        '422': {description: Input or output blocked by the independent LLM guardrail}
+        '503': {description: OpenAI integration is disabled or not configured}
+  /v1/llm/status:
+    get:
+      summary: Inspect non-secret LLM configuration, controls and token counters
+      responses: {'200': {description: Summary and investigation-copilot status without credentials}}
+  /v1/batch-score:
+    post:
+      summary: Submit up to 10,000 feature records for asynchronous hybrid scoring
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/BatchScoreRequest'}}}
+      responses: {'202': {description: Batch job queued}}
+  /v1/batch-jobs/{jobId}:
+    get:
+      summary: Retrieve batch progress, throughput and scored records
+      parameters: [{in: path, name: jobId, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: Batch job state and results}
+        '404': {description: Batch job not found}
+  /v1/file-jobs/scan:
+    post:
+      summary: Trigger discovery of newly accepted trade files
+      responses: {'200': {description: Newly queued files}}
+  /v1/file-jobs:
+    get:
+      summary: List automatic trade-file ML processing results
+      responses: {'200': {description: File jobs, throughput and output metadata}}
+  /v1/cases:
+    get:
+      summary: List prioritised clustered cases
+      parameters:
+        - {in: query, name: minRisk, schema: {type: integer, minimum: 0, maximum: 100}}
+      responses: {'200': {description: Cases}}
+  /v1/cases/{caseId}/evidence:
+    get:
+      summary: Retrieve citation-backed evidence pack
+      parameters: [{in: path, name: caseId, required: true, schema: {type: string}}]
+      responses: {'200': {description: Evidence pack}}
+  /v1/cases/{caseId}/copilot:
+    post:
+      summary: Invoke the guarded investigation copilot through the Java orchestration layer
+      parameters: [{in: path, name: caseId, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/InvestigationCopilotRequest'}}}
+      responses:
+        '200': {description: Generated, cached or gated advisory analysis, content: {application/json: {schema: {$ref: '#/components/schemas/InvestigationCopilotResponse'}}}}
+        '422': {description: Path/request identifiers differ or the LLM guardrail blocks the exchange}
+        '503': {description: OpenAI integration is disabled or not configured}
+  /v1/cases/{caseId}/decisions:
+    post:
+      summary: Record a human investigator disposition
+      parameters: [{in: path, name: caseId, required: true, schema: {type: string}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Decision'}}}}
+      responses: {'201': {description: Decision recorded}}
+components:
+  schemas:
+    TradeEvent:
+      type: object
+      required: [tradeId, orderId, eventTime, instrument, side, quantity, price, accountId, clientId, venue]
+      properties:
+        tradeId: {type: string}
+        orderId: {type: string}
+        eventTime: {type: string, format: date-time}
+        instrument: {type: string}
+        side: {enum: [BUY, SELL]}
+        quantity: {type: number, exclusiveMinimum: 0}
+        price: {type: number, exclusiveMinimum: 0}
+        accountId: {type: string}
+        clientId: {type: string}
+        venue: {type: string}
+    IngestionBatchRequest:
+      type: object
+      required: [batchId, sourceSystem, schemaVersion, trades]
+      properties:
+        batchId: {type: string}
+        sourceSystem: {type: string}
+        schemaVersion: {const: trade-event-v1}
+        trades: {type: array, minItems: 1, items: {$ref: '#/components/schemas/TradeEvent'}}
+    IngestionResult:
+      type: object
+      properties:
+        batchId: {type: string}
+        received: {type: integer}
+        accepted: {type: integer}
+        rejected: {type: integer}
+        duplicates: {type: integer}
+        status: {type: string}
+        nextStage: {type: string}
+        idempotent: {type: boolean}
+        errors: {type: array, items: {type: object}}
+    BatchScoreItem:
+      type: object
+      required: [alertId, features]
+      properties:
+        alertId: {type: string}
+        typology: {type: string, default: WASH_TRADING}
+        features: {type: object, additionalProperties: {type: number, minimum: 0, maximum: 1}}
+        evidenceRefs: {type: array, items: {type: string}}
+    BatchScoreRequest:
+      type: object
+      required: [batchId, records]
+      properties:
+        batchId: {type: string}
+        records: {type: array, minItems: 1, maxItems: 10000, items: {$ref: '#/components/schemas/BatchScoreItem'}}
+    ScoreRequest:
+      type: object
+      required: [alertId, asOf]
+      properties: {alertId: {type: string}, asOf: {type: string, format: date-time}, scoreVersion: {type: string}}
+    Assessment:
+      type: object
+      required: [assessmentId, risk, confidence, contributions, evidenceRefs]
+      properties:
+        assessmentId: {type: string}
+        risk: {type: integer, minimum: 0, maximum: 100}
+        confidence: {type: number, minimum: 0, maximum: 1}
+        contributions: {type: array, items: {type: object, properties: {feature: {type: string}, value: {}, points: {type: number}, direction: {enum: [increase, reduce, unknown]}}}}
+        evidenceRefs: {type: array, items: {type: string}}
+        versions: {type: object, additionalProperties: {type: string}}
+        modelDisagreement: {type: number, minimum: 0, maximum: 1, nullable: true}
+        uncertaintyBand: {type: string, enum: [LOW, MEDIUM, HIGH]}
+        copilotEligible: {type: boolean}
+    InvestigationCopilotRequest:
+      type: object
+      additionalProperties: false
+      required: [caseId, alertId, region, assetClass, typology, priority, evidenceCoverage, modelDisagreement, riskDrivers, evidenceRefs]
+      properties:
+        caseId: {type: string, minLength: 1, maxLength: 100}
+        alertId: {type: string, minLength: 1, maxLength: 100}
+        region: {type: string, enum: [AMER, EMEA, APAC, GLOBAL]}
+        assetClass: {type: string, enum: [FIXED_INCOME, FOREIGN_EXCHANGE, INTEREST_RATE_DERIVATIVES, CREDIT_DERIVATIVES]}
+        typology: {type: string, enum: [WASH_TRADING, SPOOFING, FRONT_RUNNING, INSIDER_DEALING, MANIPULATION]}
+        priority: {type: integer, minimum: 0, maximum: 100}
+        evidenceCoverage: {type: number, minimum: 0, maximum: 1}
+        modelDisagreement: {type: number, minimum: 0, maximum: 1}
+        riskDrivers: {type: array, minItems: 1, maxItems: 10, items: {type: string, maxLength: 400}}
+        riskReducers: {type: array, maxItems: 8, items: {type: string, maxLength: 400}}
+        timeline: {type: array, maxItems: 20, items: {type: string, maxLength: 400}}
+        entityRelationships: {type: array, maxItems: 10, items: {type: string, maxLength: 400}}
+        evidenceRefs: {type: array, minItems: 1, maxItems: 50, items: {type: string, maxLength: 400}}
+        dataGaps: {type: array, maxItems: 10, items: {type: string, maxLength: 400}}
+    CopilotAnalysis:
+      type: object
+      additionalProperties: false
+      required: [summary, counterHypothesis, nextBestActions, missingEvidence, confidenceNote, citedEvidenceRefs]
+      properties:
+        summary: {type: string, minLength: 20, maxLength: 700}
+        counterHypothesis: {type: string, minLength: 10, maxLength: 400}
+        nextBestActions: {type: array, minItems: 1, maxItems: 4, items: {type: string}}
+        missingEvidence: {type: array, maxItems: 4, items: {type: string}}
+        confidenceNote: {type: string, minLength: 10, maxLength: 240}
+        citedEvidenceRefs: {type: array, minItems: 1, maxItems: 12, items: {type: string}}
+    InvestigationCopilotResponse:
+      type: object
+      required: [status, caseId, playbookRefs, tokenControl, grounded, decisionPolicy]
+      properties:
+        status: {type: string, enum: [GENERATED, CACHED, GATED, ABSTAINED]}
+        caseId: {type: string}
+        analysis: {$ref: '#/components/schemas/CopilotAnalysis'}
+        reason: {type: string, nullable: true}
+        model: {type: string, nullable: true}
+        playbookRefs: {type: array, items: {type: string}}
+        tokenControl: {type: object, additionalProperties: true}
+        grounded: {type: boolean}
+        decisionPolicy: {type: string, const: HUMAN_REVIEW_REQUIRED}
+    Decision:
+      type: object
+      required: [investigatorId, disposition, reason]
+      properties:
+        investigatorId: {type: string}
+        disposition: {enum: [ESCALATE, FURTHER_REVIEW, FALSE_POSITIVE, CLOSE, REQUEST_INFORMATION]}
+        reason: {type: string, minLength: 10}
+        notes: {type: string}
+    ModelFeedback:
+      type: object
+      additionalProperties: false
+      required: [alertId, caseId, region, assetClass, investigatorOutcome, reasonCode, modelVersion]
+      properties:
+        alertId: {type: string}
+        caseId: {type: string}
+        region: {type: string, enum: [AMER, EMEA, APAC, GLOBAL]}
+        assetClass: {type: string, enum: [FIXED_INCOME, FOREIGN_EXCHANGE, INTEREST_RATE_DERIVATIVES, CREDIT_DERIVATIVES]}
+        investigatorOutcome: {type: string, enum: [RELEVANT, FALSE_POSITIVE, ESCALATED, MORE_EVIDENCE_REQUIRED]}
+        reasonCode: {type: string}
+        modelVersion: {type: string}

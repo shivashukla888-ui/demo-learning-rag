@@ -1,0 +1,111 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-surveillance}
+      POSTGRES_USER: ${DATABASE_USER:-surveillance}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-surveillance}
+    volumes:
+      - surveillance-db:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-surveillance} -d ${DATABASE_NAME:-surveillance}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ml-service:
+    build: ./ml-service-python
+    volumes:
+      - "./runtime-data:/data"
+    environment:
+      MODEL_PATH: /data/models/surveillance-model.joblib
+      MODEL_REQUIRED: "true"
+      ML_BATCH_SIZE: "1000"
+      ML_FILE_CHUNK_SIZE: "10000"
+      ML_BATCH_WORKERS: "2"
+      ML_MODEL_WEIGHT: "0.55"
+      ML_TRADE_INPUT_ROOT: /data/input/accepted/trades
+      ML_OUTPUT_ROOT: /data/ml-output
+      ML_FILE_SCAN_SECONDS: "5"
+      ML_FILE_WORKERS: "2"
+      ML_MAX_FILE_RECORDS: "2000000"
+      ML_MAX_STATE_KEYS: "250000"
+      ML_MIN_FREE_DISK_BYTES: "1073741824"
+      DAILY_INPUT_ROOT: /data/daily-input
+      DAILY_OUTPUT_ROOT: /data/daily-output
+      DAILY_FEATURE_STATE_PATH: /data/state/rolling-features.json
+      DAILY_ALLOWED_REGIONS: AMER,EMEA,APAC,GLOBAL
+      DAILY_SCAN_SECONDS: "5"
+      DAILY_BATCH_WORKERS: "2"
+      PARQUET_BATCH_ROWS: "100000"
+      DAILY_MAX_ALERTS: "500000"
+      DAILY_MAX_CONTEXT_PER_ALERT: "5000"
+      DAILY_RULE_WEIGHT: "0.30"
+      DAILY_SUPERVISED_WEIGHT: "0.55"
+      DAILY_ANOMALY_WEIGHT: "0.15"
+      MODEL_FEEDBACK_PATH: /data/feedback/investigator-feedback.jsonl
+      LLM_ENABLED: ${LLM_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-investigation-copilot-v1}
+      LLM_MIN_PRIORITY: ${LLM_MIN_PRIORITY:-70}
+      LLM_MIN_EVIDENCE_COVERAGE: ${LLM_MIN_EVIDENCE_COVERAGE:-0.75}
+      LLM_MIN_MODEL_DISAGREEMENT: ${LLM_MIN_MODEL_DISAGREEMENT:-0.35}
+      LLM_MAX_INPUT_TOKENS: ${LLM_MAX_INPUT_TOKENS:-1800}
+      LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-450}
+      LLM_SUMMARY_MAX_OUTPUT_TOKENS: ${LLM_SUMMARY_MAX_OUTPUT_TOKENS:-220}
+      LLM_CACHE_ROOT: /data/llm-cache
+      LLM_PLAYBOOK_PATH: /app/config/typology-playbooks.json
+    ports: ["127.0.0.1:8000:8000"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 15
+
+  java-api:
+    build: ./backend-java
+    volumes:
+      - "./runtime-data:/data"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${DATABASE_NAME:-surveillance}
+      DATABASE_USER: ${DATABASE_USER:-surveillance}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-surveillance}
+      ML_BASE_URL: http://ml-service:8000
+      AEGIS_INPUT_ROOT: /data/input
+      AEGIS_INPUT_MAX_BYTES: "2147483648"
+      AEGIS_BOOTSTRAP_SAMPLES: "false"
+      AEGIS_API_KEY: ${AEGIS_API_KEY:-hackathon-local-change-me}
+      AEGIS_ACTOR_ID: ${AEGIS_ACTOR_ID:-demo-investigator}
+      AEGIS_ACTOR_ROLE: ${AEGIS_ACTOR_ROLE:-SUPERVISOR}
+      AEGIS_CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+      SURVEILLANCE_DAILY_ROOT: /data/daily-input
+      SURVEILLANCE_ALLOWED_REGIONS: AMER,EMEA,APAC,GLOBAL
+      SURVEILLANCE_MAX_ALERT_BYTES: "536870912"
+      SURVEILLANCE_MAX_PARQUET_BYTES: "21474836480"
+      SURVEILLANCE_MAX_REQUEST_SIZE: "100GB"
+    ports: ["8080:8080"]
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      ml-service: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 15
+
+  dashboard:
+    build: ./dashboard
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+      NEXT_PUBLIC_AEGIS_API_KEY: ${AEGIS_API_KEY:-hackathon-local-change-me}
+    ports: ["3000:3000"]
+    restart: unless-stopped
+    depends_on:
+      java-api: {condition: service_healthy}
+
+volumes:
+  surveillance-db:

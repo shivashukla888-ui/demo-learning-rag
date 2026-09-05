@@ -1,0 +1,51 @@
+[
+  {
+    "id": "PB-WASH-FI-01",
+    "typology": "WASH_TRADING",
+    "assetClass": "FIXED_INCOME",
+    "title": "Fixed-income wash-trading review",
+    "guidance": "Compare economic exposure, clean price, accrued interest and settlement terms. Test common control, matched quantities, repeated opposite direction and whether illiquidity or dealer facilitation explains the pattern."
+  },
+  {
+    "id": "PB-WASH-FX-01",
+    "typology": "WASH_TRADING",
+    "assetClass": "FOREIGN_EXCHANGE",
+    "title": "FX wash-trading review",
+    "guidance": "Compare currency pair, value date, notional, direction and execution window. Test internalisation, roll activity, benchmark windows, shared control and whether net currency exposure genuinely changed."
+  },
+  {
+    "id": "PB-WASH-IRD-01",
+    "typology": "WASH_TRADING",
+    "assetClass": "INTEREST_RATE_DERIVATIVES",
+    "title": "Interest-rate derivatives wash-trading review",
+    "guidance": "Compare DV01 and curve exposure rather than notional alone. Check lifecycle events, compression, novation, package hedges, clearing identifiers and whether apparently opposite trades leave material rate risk."
+  },
+  {
+    "id": "PB-WASH-CD-01",
+    "typology": "WASH_TRADING",
+    "assetClass": "CREDIT_DERIVATIVES",
+    "title": "Credit-derivatives wash-trading review",
+    "guidance": "Compare spread risk, reference entity, seniority, maturity and index or single-name legs. Test allocations, compression, common control and whether the combined position materially changed default exposure."
+  },
+  {
+    "id": "PB-SBEL-01",
+    "typology": "SPOOFING",
+    "assetClass": "FIXED_INCOME",
+    "title": "Spoofing and layering review",
+    "guidance": "Check order-book level, cancellation timing, opposite-side fills, price impact, recurrence and peer behaviour. Separate genuine liquidity provision and volatile-market repricing from potentially manipulative layering."
+  },
+  {
+    "id": "PB-FRONT-01",
+    "typology": "FRONT_RUNNING",
+    "assetClass": "FOREIGN_EXCHANGE",
+    "title": "Potential front-running review",
+    "guidance": "Verify information access, client-order timing, instrument linkage, price advantage and recurrence. Consider pre-existing positions, hedging mandates and public market events as counter-evidence."
+  },
+  {
+    "id": "PB-GENERAL-01",
+    "typology": "MANIPULATION",
+    "assetClass": "GLOBAL",
+    "title": "General evidence sufficiency",
+    "guidance": "Prioritisation is not a misconduct finding. Identify missing market context, entity confidence, data lineage and economic-exposure evidence before recommending the next investigative step."
+  }
+]

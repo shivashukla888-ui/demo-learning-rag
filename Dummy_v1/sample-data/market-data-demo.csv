@@ -1,0 +1,3 @@
+event_time,instrument,venue,bid,ask,last_price,volume
+2026-08-25T09:30:02Z,NOVA.L,XLON,42.17,42.19,42.18,250000
+2026-08-25T09:30:10Z,NOVA.L,XLON,42.18,42.20,42.19,256000

@@ -1,0 +1,12 @@
+CREATE TABLE trade (trade_id TEXT PRIMARY KEY, event_ts TEXT NOT NULL, instrument_id TEXT NOT NULL, account_id TEXT NOT NULL, side TEXT CHECK(side IN ('BUY','SELL')), quantity REAL NOT NULL, price REAL NOT NULL, venue_id TEXT, currency TEXT, source_hash TEXT NOT NULL);
+CREATE TABLE position_snapshot (position_id TEXT PRIMARY KEY, account_id TEXT NOT NULL, instrument_id TEXT NOT NULL, as_of_ts TEXT NOT NULL, quantity REAL NOT NULL, evidence_uri TEXT NOT NULL);
+CREATE TABLE market_snapshot (market_id TEXT PRIMARY KEY, instrument_id TEXT NOT NULL, as_of_ts TEXT NOT NULL, bid REAL, ask REAL, volume REAL, realised_volatility REAL, adv REAL, quality_status TEXT NOT NULL);
+CREATE TABLE entity (entity_id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, canonical_name TEXT, valid_from TEXT, valid_to TEXT);
+CREATE TABLE entity_edge (edge_id TEXT PRIMARY KEY, from_entity_id TEXT NOT NULL, to_entity_id TEXT NOT NULL, relation_type TEXT NOT NULL, confidence REAL NOT NULL, evidence_ref TEXT NOT NULL, valid_from TEXT, valid_to TEXT);
+CREATE TABLE alert (alert_id TEXT PRIMARY KEY, rule_id TEXT NOT NULL, event_ts TEXT NOT NULL, account_id TEXT, instrument_id TEXT, payload_json TEXT NOT NULL);
+CREATE TABLE investigation_case (case_id TEXT PRIMARY KEY, cluster_version TEXT NOT NULL, risk_score INTEGER NOT NULL, confidence REAL NOT NULL, status TEXT NOT NULL, created_ts TEXT NOT NULL);
+CREATE TABLE case_alert (case_id TEXT NOT NULL, alert_id TEXT NOT NULL, cluster_reason TEXT NOT NULL, PRIMARY KEY(case_id,alert_id));
+CREATE TABLE feature_value (assessment_id TEXT NOT NULL, feature_name TEXT NOT NULL, value_json TEXT, missing_reason TEXT, evidence_refs_json TEXT NOT NULL, feature_version TEXT NOT NULL, PRIMARY KEY(assessment_id,feature_name));
+CREATE TABLE score_contribution (assessment_id TEXT NOT NULL, feature_name TEXT NOT NULL, contribution REAL NOT NULL, direction TEXT NOT NULL, score_version TEXT NOT NULL);
+CREATE TABLE claim (claim_id TEXT PRIMARY KEY, case_id TEXT NOT NULL, claim_text TEXT NOT NULL, metric_name TEXT NOT NULL, metric_value TEXT NOT NULL, evidence_refs_json TEXT NOT NULL, prompt_version TEXT);
+CREATE TABLE investigator_decision (decision_id TEXT PRIMARY KEY, case_id TEXT NOT NULL, investigator_id TEXT NOT NULL, disposition TEXT NOT NULL, reason TEXT NOT NULL, notes TEXT, decided_ts TEXT NOT NULL);
